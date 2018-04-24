@@ -13,7 +13,6 @@ import baselines.her.experiment.config as config
 from baselines.her.rollout import RolloutWorker
 from baselines.her.util import mpi_fork
 
-
 def mpi_average(value):
     if value == []:
         value = [0.]
@@ -33,15 +32,25 @@ def train(policy, rollout_worker, evaluator,
 
     logger.info("Training...")
     best_success_rate = -1
+
+    #In each epoch, we run multiple episodes
     for epoch in range(n_epochs):
         # train
         rollout_worker.clear_history()
+        #by default there are 10 cycles per epoch
         for _ in range(n_cycles):
+            #each episode reaches 102 states with batches_per_rollout = 2
             episode = rollout_worker.generate_rollouts()
             policy.store_episode(episode)
+            #update total number of states seen so far during training
+            policy.buffer.total_states_achieved += 102
+            #n_batches by default is 40
             for _ in range(n_batches):
+                #Subsituting goals happens at sampling time during training
                 policy.train()
             policy.update_target_net()
+
+        print(rollout_worker.countTracker.uniqueHashes)
 
         # test
         evaluator.clear_history()
@@ -126,7 +135,7 @@ def launch(
             'You are running HER with just a single MPI worker. This will work, but the ' +
             'experiments that we report in Plappert et al. (2018, https://arxiv.org/abs/1802.09464) ' +
             'were obtained with --num_cpu 19. This makes a significant difference and if you ' +
-            'are looking to reproduce those results, be aware of this. Please also refer to ' + 
+            'are looking to reproduce those results, be aware of this. Please also refer to ' +
             'https://github.com/openai/baselines/issues/314 for further details.')
         logger.warn('****************')
         logger.warn()

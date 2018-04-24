@@ -5,6 +5,7 @@ import pickle
 from mujoco_py import MujocoException
 
 from baselines.her.util import convert_episode_to_batch_major, store_args
+from baselines.her.visitTracker import CountTracker
 
 
 class RolloutWorker:
@@ -38,6 +39,8 @@ class RolloutWorker:
 
         self.success_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
+
+        self.countTracker = CountTracker(128)
 
         self.n_episodes = 0
         self.g = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # goals
@@ -77,6 +80,8 @@ class RolloutWorker:
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in self.info_keys]
         Qs = []
+        #time horizon = number of states achieved (50), subtracting off initial state
+        #in grand scheme of things, should include initial state as an achieved goal, so should be 51
         for t in range(self.T):
             policy_output = self.policy.get_actions(
                 o, ag, self.g,
@@ -95,6 +100,7 @@ class RolloutWorker:
                 # The non-batched case should still have a reasonable shape.
                 u = u.reshape(1, -1)
 
+            #rollout_batch size by default is 2, dimensions of goal is 3
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
@@ -103,11 +109,19 @@ class RolloutWorker:
                 try:
                     # We fully ignore the reward here because it will have to be re-computed
                     # for HER.
+                    #self.envs[i].step(u[i]) contains all of the environment feedback
+                    #The above statement returns an observation key with all observation
+                    #information (multiple values), an achieved goal key with a 3-D point, a
+                    #desired goal key with a 3-D point, and an is_success key with a boolean value
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                     if 'is_success' in info:
                         success[i] = info['is_success']
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']
+
+                    hashcode = self.countTracker.compute_hash_code(curr_o_new['achieved_goal'])
+                    self.countTracker.update_count(hashcode)
+
                     for idx, key in enumerate(self.info_keys):
                         info_values[idx][t, i] = info[key]
                     if self.render:
@@ -135,6 +149,7 @@ class RolloutWorker:
                        u=acts,
                        g=goals,
                        ag=achieved_goals)
+
         for key, value in zip(self.info_keys, info_values):
             episode['info_{}'.format(key)] = value
 
