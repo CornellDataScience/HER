@@ -76,6 +76,11 @@ class RolloutWorker:
         o[:] = self.initial_o
         ag[:] = self.initial_ag
 
+        #Add initial states as "achieved goals"
+        hashcode = self.countTracker.compute_hash_code(self.initial_ag[0])
+        self.countTracker.update_count(hashcode)
+        self.countTracker.update_count(hashcode)
+
         # generate episodes
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in self.info_keys]

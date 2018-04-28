@@ -50,7 +50,7 @@ def train(policy, rollout_worker, evaluator,
                 policy.train()
             policy.update_target_net()
 
-        print(rollout_worker.countTracker.uniqueHashes)
+        print(rollout_worker.countTracker.hashtable)
 
         # test
         evaluator.clear_history()

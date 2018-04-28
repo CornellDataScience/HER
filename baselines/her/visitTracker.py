@@ -6,8 +6,6 @@ class CountTracker(object):
         self.hyperplanes = np.random.normal(size=(self.granularity, 3))
         #maps hashcodes to number of visits
         self.hashtable = {}
-        #more compact representation -- redundant now, TODO: Remove
-        self.uniqueHashes = {}
 
     def compute_hash_code(self, state):
         #print("A: ")
@@ -26,10 +24,6 @@ class CountTracker(object):
             else:
                 string_version += "0"
         hash_code = int(string_version, 2)
-        if hash_code in self.uniqueHashes:
-            self.uniqueHashes[hash_code] += 1
-        else:
-            self.uniqueHashes[hash_code] = 1
         return hash_code
 
     def update_count(self, hash_code):
