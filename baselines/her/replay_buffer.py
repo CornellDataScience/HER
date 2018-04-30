@@ -18,7 +18,6 @@ class ReplayBuffer:
         self.size = size_in_transitions // T
         self.T = T
         self.sample_transitions = sample_transitions
-        self.total_states_achieved = 0
 
         # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
         self.buffers = {key: np.empty([self.size, *shape])
@@ -35,7 +34,7 @@ class ReplayBuffer:
         with self.lock:
             return self.current_size == self.size
 
-    def sample(self, batch_size):
+    def sample(self, batch_size, rollout_worker):
         """Returns a dict {key: array(batch_size x shapes[key])}
         """
         buffers = {}
@@ -49,7 +48,7 @@ class ReplayBuffer:
         buffers['ag_2'] = buffers['ag'][:, 1:, :]
 
         #Obtain some transitions from her with some substituted goals (for training)
-        transitions = self.sample_transitions(buffers, batch_size)
+        transitions = self.sample_transitions(buffers, batch_size, rollout_worker)
 
         for key in (['r', 'o_2', 'ag_2'] + list(self.buffers.keys())):
             assert key in transitions, "key %s missing from transitions" % key
