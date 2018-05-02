@@ -40,7 +40,8 @@ class RolloutWorker:
         self.success_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
 
-        self.countTracker = CountTracker(16)
+        #Test with 256
+        self.countTracker = CountTracker(128)
 
         self.n_episodes = 0
         self.g = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # goals

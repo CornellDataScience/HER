@@ -8,13 +8,7 @@ class CountTracker(object):
         self.hashtable = {}
 
     def compute_hash_code(self, state):
-        #print("A: ")
-        #print(self.hyperplanes)
-        #print("state: ")
-        #print(state)
         result = np.dot(self.hyperplanes, state)
-        #print("result: ")
-        #print(result)
 
         string_version = ""
         #Apply sgn operation to each scalar and placing in a binary string
