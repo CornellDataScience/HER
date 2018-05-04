@@ -40,7 +40,8 @@ class RolloutWorker:
         self.success_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
 
-        #Test with 256
+        #256 gets up the fastest on easiest environment
+        #Ran 128 on heavy job
         self.countTracker = CountTracker(128)
 
         self.n_episodes = 0
@@ -81,6 +82,7 @@ class RolloutWorker:
         hashcode = self.countTracker.compute_hash_code(self.initial_ag[0])
         self.countTracker.update_count(hashcode)
         self.countTracker.update_count(hashcode)
+
 
         # generate episodes
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []

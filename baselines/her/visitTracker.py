@@ -6,6 +6,8 @@ class CountTracker(object):
         self.hyperplanes = np.random.normal(size=(self.granularity, 3))
         #maps hashcodes to number of visits
         self.hashtable = {}
+        #maps goals to hashcodes
+        self.goal_hash = {}
 
     def compute_hash_code(self, state):
         result = np.dot(self.hyperplanes, state)
