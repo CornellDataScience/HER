@@ -41,8 +41,7 @@ class RolloutWorker:
         self.Q_history = deque(maxlen=history_len)
 
         #256 gets up the fastest on easiest environment
-        #Ran 128 on heavy job
-        self.countTracker = CountTracker(128)
+        self.countTracker = CountTracker(256)
 
         self.n_episodes = 0
         self.g = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # goals
