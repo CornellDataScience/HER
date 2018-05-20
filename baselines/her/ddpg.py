@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 import tensorflow as tf
+import threading
 from tensorflow.contrib.staging import StagingArea
 
 from baselines import logger
@@ -138,7 +139,7 @@ class DDPG(object):
         else:
             return ret
 
-    def store_episode(self, episode_batch, rollout_worker, update_stats=True):
+    def store_episode(self, episode_batch, rollout_worker, epoch, update_stats=True):
         """
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
@@ -151,7 +152,7 @@ class DDPG(object):
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
             episode_batch['ag_2'] = episode_batch['ag'][:, 1:, :]
             num_normalizing_transitions = transitions_in_episode_batch(episode_batch)
-            transitions = self.sample_transitions(episode_batch, num_normalizing_transitions, rollout_worker)
+            transitions = self.sample_transitions(episode_batch, num_normalizing_transitions, rollout_worker, epoch)
 
             o, o_2, g, ag = transitions['o'], transitions['o_2'], transitions['g'], transitions['ag']
             transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
@@ -184,9 +185,9 @@ class DDPG(object):
         self.Q_adam.update(Q_grad, self.Q_lr)
         self.pi_adam.update(pi_grad, self.pi_lr)
 
-    def sample_batch(self, rollout_worker):
+    def sample_batch(self, rollout_worker, epoch):
         #calls a function in replay_buffer.py
-        transitions = self.buffer.sample(self.batch_size, rollout_worker)
+        transitions = self.buffer.sample(self.batch_size, rollout_worker, epoch)
         o, o_2, g = transitions['o'], transitions['o_2'], transitions['g']
         ag, ag_2 = transitions['ag'], transitions['ag_2']
         transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
@@ -195,15 +196,15 @@ class DDPG(object):
         transitions_batch = [transitions[key] for key in self.stage_shapes.keys()]
         return transitions_batch
 
-    def stage_batch(self, rollout_worker, batch=None):
+    def stage_batch(self, rollout_worker, epoch, batch=None):
         if batch is None:
-            batch = self.sample_batch(rollout_worker)
+            batch = self.sample_batch(rollout_worker, epoch)
         assert len(self.buffer_ph_tf) == len(batch)
         self.sess.run(self.stage_op, feed_dict=dict(zip(self.buffer_ph_tf, batch)))
 
-    def train(self, rollout_worker, stage=True):
+    def train(self, rollout_worker, epoch, stage=True):
         if stage:
-            self.stage_batch(rollout_worker)
+            self.stage_batch(rollout_worker, epoch)
         critic_loss, actor_loss, Q_grad, pi_grad = self._grads()
         self._update(Q_grad, pi_grad)
         return critic_loss, actor_loss

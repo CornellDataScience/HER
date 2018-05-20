@@ -41,11 +41,11 @@ def train(policy, rollout_worker, evaluator,
         for _ in range(n_cycles):
             #each episode reaches 102 states with batches_per_rollout = 2
             episode = rollout_worker.generate_rollouts()
-            policy.store_episode(episode, rollout_worker)
+            policy.store_episode(episode, rollout_worker, epoch)
             #n_batches by default is 40
             for _ in range(n_batches):
                 #Subsituting goals happens at sampling time during training
-                policy.train(rollout_worker)
+                policy.train(rollout_worker, epoch)
             policy.update_target_net()
 
         #Below print statement allows us to view hash table

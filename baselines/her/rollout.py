@@ -2,6 +2,7 @@ from collections import deque
 
 import numpy as np
 import pickle
+import threading
 from mujoco_py import MujocoException
 
 from baselines.her.util import convert_episode_to_batch_major, store_args
@@ -40,8 +41,8 @@ class RolloutWorker:
         self.success_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
 
-        #256 gets up the fastest on easiest environment
-        self.countTracker = CountTracker(256)
+        #512 gets up the fastest on easiest environment
+        self.countTracker = CountTracker(512)
 
         self.n_episodes = 0
         self.g = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # goals
@@ -74,14 +75,14 @@ class RolloutWorker:
         # compute observations
         o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
         ag = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
-        o[:] = self.initial_o
-        ag[:] = self.initial_ag
+        o[:] = self.initial_o.astype(np.float32)
+        ag[:] = self.initial_ag.astype(np.float32)
 
         #Add initial states as "achieved goals"
-        hashcode = self.countTracker.compute_hash_code(self.initial_ag[0])
+        hashcode = self.countTracker.compute_hash_code(self.initial_ag[0].astype(np.float32))
         self.countTracker.update_count(hashcode)
-        self.countTracker.update_count(hashcode)
-
+        hashcode_2 = self.countTracker.compute_hash_code(self.initial_ag[1].astype(np.float32))
+        self.countTracker.update_count(hashcode_2)
 
         # generate episodes
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
@@ -123,10 +124,10 @@ class RolloutWorker:
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                     if 'is_success' in info:
                         success[i] = info['is_success']
-                    o_new[i] = curr_o_new['observation']
-                    ag_new[i] = curr_o_new['achieved_goal']
+                    o_new[i] = curr_o_new['observation'].astype(np.float32)
+                    ag_new[i] = curr_o_new['achieved_goal'].astype(np.float32)
 
-                    hashcode = self.countTracker.compute_hash_code(curr_o_new['achieved_goal'])
+                    hashcode = self.countTracker.compute_hash_code(curr_o_new['achieved_goal'].astype(np.float32))
                     self.countTracker.update_count(hashcode)
 
                     for idx, key in enumerate(self.info_keys):
@@ -141,6 +142,7 @@ class RolloutWorker:
                 self.reset_all_rollouts()
                 return self.generate_rollouts()
 
+
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
             successes.append(success.copy())
@@ -148,9 +150,11 @@ class RolloutWorker:
             goals.append(self.g.copy())
             o[...] = o_new
             ag[...] = ag_new
+
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
         self.initial_o[:] = o
+
 
         episode = dict(o=obs,
                        u=acts,

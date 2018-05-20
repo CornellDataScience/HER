@@ -18,7 +18,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):
         future_p = 0
 
 
-    def _sample_her_transitions(episode_batch, batch_size_in_transitions, rollout_worker):
+    def _sample_her_transitions(episode_batch, batch_size_in_transitions, rollout_worker, epoch):
         #episode_batch is {key: array(buffer_size x T x dim_key)}
         T = episode_batch['u'].shape[1]
         rollout_batch_size = episode_batch['u'].shape[0]
@@ -90,14 +90,19 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):
                 num_visits = rollout_worker.countTracker.hashtable[reached_hash]
                 future_visits.append([m, num_visits])
 
-
+            np.random.shuffle(future_visits)
             future_visits = sorted(future_visits, key=lambda x : x[1], reverse=True)
             future_visits = np.array(future_visits)
 
             time_steps = future_visits[:,0]
 
             unnormalized_probs = np.arange(1, (T - specific_time) + 1)
-            alpha = 1
+            #alpha = np.power(.975, epoch)
+            alpha = 0
+            if epoch < 30:
+                alpha = 1
+            else:
+                alpha = np.power(.98, epoch - 30)
 
             unnormalized_probs = np.power(unnormalized_probs, alpha)
             normalizing_constant = sum(unnormalized_probs)

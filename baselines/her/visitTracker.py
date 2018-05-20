@@ -19,7 +19,7 @@ class CountTracker(object):
                 string_version += "1"
             else:
                 string_version += "0"
-        hash_code = int(string_version, 2)
+        hash_code = int(string_version)
         return hash_code
 
     def update_count(self, hash_code):
