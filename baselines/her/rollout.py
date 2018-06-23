@@ -81,8 +81,9 @@ class RolloutWorker:
         #Add initial states as "achieved goals"
         hashcode = self.countTracker.compute_hash_code(self.initial_ag[0].astype(np.float32))
         self.countTracker.update_count(hashcode)
-        hashcode_2 = self.countTracker.compute_hash_code(self.initial_ag[1].astype(np.float32))
-        self.countTracker.update_count(hashcode_2)
+        if len(self.initial_ag) > 1:
+            hashcode_2 = self.countTracker.compute_hash_code(self.initial_ag[1].astype(np.float32))
+            self.countTracker.update_count(hashcode_2)
 
         # generate episodes
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
